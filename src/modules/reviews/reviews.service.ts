@@ -20,8 +20,8 @@ export const createReview = async (
     throw new AppError(403, "Forbidden: Access denied");
   }
 
-  if (rentalRequest.status !== "COMPLETED") {
-    throw new AppError(400, "You can only review a completed rental");
+  if (rentalRequest.status !== "COMPLETED" && rentalRequest.status !== "ACTIVE") {
+    throw new AppError(400, "You can only review a completed or active rental");
   }
 
   const existingReview = await prisma.review.findUnique({
