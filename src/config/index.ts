@@ -12,8 +12,12 @@ const config = {
     expires_in: process.env.JWT_EXPIRES_IN || "7d",
   },
   stripe: {
-    secretKey: process.env.STRIPE_SECRET_KEY || "",
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+    get secretKey() {
+      return process.env.STRIPE_SECRET_KEY || "";
+    },
+    get webhookSecret() {
+      return process.env.STRIPE_WEBHOOK_SECRET || "";
+    },
   },
 };
 

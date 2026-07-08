@@ -100,6 +100,7 @@ export const confirmPayment = async (signature: string, rawBody: Buffer): Promis
   try {
     event = stripe.webhooks.constructEvent(rawBody, signature, config.stripe.webhookSecret);
   } catch (err: any) {
+    console.error("Webhook signature verification failed:", err.message);
     throw new AppError(400, `Stripe webhook signature verification failed: ${err.message}`);
   }
 
