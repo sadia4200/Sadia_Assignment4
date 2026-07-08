@@ -1,50 +1,19 @@
-import { Request, Response, NextFunction } from "express";
-import { AppError } from "../../utils/errors";
+import { z } from "zod";
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const registerSchema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  email: z.string().email("A valid email address is required"),
+  password: z.string().min(6, "Password must be at least 6 characters long"),
+  phone: z.string().optional(),
+  role: z.enum(["TENANT", "LANDLORD"], {
+    message: "Role is required and must be either TENANT or LANDLORD",
+  }),
+});
 
-export const validateRegister = (req: Request, _res: Response, next: NextFunction): void => {
-  const { name, email, password, role } = req.body;
-  const errors: Record<string, string> = {};
+export const loginSchema = z.object({
+  email: z.string().email("A valid email address is required"),
+  password: z.string().min(1, "Password is required"),
+});
 
-  if (!name || typeof name !== "string" || name.trim().length === 0) {
-    errors.name = "Name is required and must be a string";
-  }
-
-  if (!email || !emailRegex.test(email)) {
-    errors.email = "A valid email address is required";
-  }
-
-  if (!password || typeof password !== "string" || password.length < 6) {
-    errors.password = "Password is required and must be at least 6 characters long";
-  }
-
-  if (!role || (role !== "TENANT" && role !== "LANDLORD")) {
-    errors.role = "Role is required and must be either TENANT or LANDLORD";
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return next(new AppError(400, "Validation Error", errors));
-  }
-
-  next();
-};
-
-export const validateLogin = (req: Request, _res: Response, next: NextFunction): void => {
-  const { email, password } = req.body;
-  const errors: Record<string, string> = {};
-
-  if (!email || !emailRegex.test(email)) {
-    errors.email = "A valid email address is required";
-  }
-
-  if (!password || typeof password !== "string" || password.trim().length === 0) {
-    errors.password = "Password is required";
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return next(new AppError(400, "Validation Error", errors));
-  }
-
-  next();
-};
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
