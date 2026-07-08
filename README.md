@@ -136,9 +136,18 @@ RentNest supports fully-integrated Stripe card checkouts:
 * `PUT /admin/categories/:id` — Update category details.
 * `DELETE /admin/categories/:id` — Delete category (blocked if properties reference it).
 
+## 📖 API Documentation
+
+RentNest uses Swagger / OpenAPI to compile interactive API documentation. You can access the UI endpoint locally at:
+* **Local API Docs URL:** [http://localhost:5000/api/docs](http://localhost:5000/api/docs)
+
+Once deployed, the live document interface will be available at:
+* **Postman/Swagger Docs URL:** [LIVE_API_URL]/api/docs
+
 ---
 
 ## 🔗 Deployment & Demo Links
 
-* **Live API Production URL:** *[To be filled in after hosting]*
+* **Live API Production URL:** [LIVE_API_URL]
+* **Postman/Swagger Docs URL:** [LIVE_API_URL]/api/docs
 * **E2E Demo Walkthrough Video:** *[To be filled in after recording]*
