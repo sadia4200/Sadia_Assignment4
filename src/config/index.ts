@@ -11,6 +11,10 @@ const config = {
     secret: process.env.JWT_SECRET || "fallback-secret-rentnest-jwt-key-2026",
     expires_in: process.env.JWT_EXPIRES_IN || "7d",
   },
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || "",
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+  },
 };
 
 export default config;

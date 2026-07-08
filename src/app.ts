@@ -2,14 +2,20 @@ import express, { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import apiRoutes from "./routes";
+import { paymentsRoutes } from "./modules/payments/payments.routes";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
 import { AppError } from "./utils/errors";
 
 const app: Application = express();
 
-// --- Global Middlewares ---
+// --- Global Security & Pre-parsing Middlewares ---
 app.use(cors());
 app.use(helmet());
+
+// --- Stripe Webhook & Payment routes (mounted before global JSON parsing) ---
+app.use("/api/payments", paymentsRoutes);
+
+// --- Standard Global JSON / URLencoded Middlewares ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
