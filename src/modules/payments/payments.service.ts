@@ -31,13 +31,6 @@ export const createCheckoutSession = async (
     throw new AppError(403, "Forbidden: Access denied");
   }
 
-  if (rentalRequest.status !== "APPROVED") {
-    throw new AppError(
-      400,
-      `Payment can only be made for approved rental requests. Current request status is ${rentalRequest.status}.`
-    );
-  }
-
   const existingCompletedPayment = await prisma.payment.findFirst({
     where: {
       rentalRequestId,
@@ -45,8 +38,15 @@ export const createCheckoutSession = async (
     },
   });
 
-  if (existingCompletedPayment) {
+  if (existingCompletedPayment || rentalRequest.status === "ACTIVE" || rentalRequest.status === "COMPLETED") {
     throw new AppError(409, "Payment has already been completed for this rental request");
+  }
+
+  if (rentalRequest.status !== "APPROVED") {
+    throw new AppError(
+      400,
+      `Payment can only be made for approved rental requests. Current request status is ${rentalRequest.status}.`
+    );
   }
 
   const property = rentalRequest.property;

@@ -45,7 +45,7 @@ async function main() {
   // 3. Seed Landlords
   console.log("Seeding Landlord users...");
   const landlordPassword = await bcrypt.hash("Password123", 12);
-  
+
   const landlord1 = await prisma.user.upsert({
     where: { email: "landlord1@rentnest.com" },
     update: {},
