@@ -62,6 +62,7 @@ export const errorHandler: ErrorRequestHandler = (
 
   // 5. Unhandled / Unexpected Errors
   // We NEVER leak stack traces or internal implementation details in the response body.
+  console.error("Unhandled Error:", err);
   const message = "Something went wrong on the server";
   sendError(res, 500, message, null);
 };

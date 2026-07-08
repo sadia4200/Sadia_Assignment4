@@ -14,9 +14,30 @@ export const validate = (schema: z.ZodObject<any> | z.ZodTypeAny) => {
           query: req.query,
           params: req.params,
         });
-        if (parsed.body !== undefined) req.body = parsed.body;
-        if (parsed.query !== undefined) req.query = parsed.query;
-        if (parsed.params !== undefined) req.params = parsed.params;
+        if (parsed.body !== undefined) {
+          Object.defineProperty(req, "body", {
+            value: parsed.body,
+            writable: true,
+            configurable: true,
+            enumerable: true,
+          });
+        }
+        if (parsed.query !== undefined) {
+          Object.defineProperty(req, "query", {
+            value: parsed.query,
+            writable: true,
+            configurable: true,
+            enumerable: true,
+          });
+        }
+        if (parsed.params !== undefined) {
+          Object.defineProperty(req, "params", {
+            value: parsed.params,
+            writable: true,
+            configurable: true,
+            enumerable: true,
+          });
+        }
       } else {
         req.body = await schema.parseAsync(req.body);
       }
