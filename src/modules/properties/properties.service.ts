@@ -115,3 +115,129 @@ export const getPropertyById = async (id: string) => {
 
   return property;
 };
+
+export const createProperty = async (landlordId: string, data: any) => {
+  const { categoryId, ...propertyDetails } = data;
+
+  const category = await prisma.category.findUnique({
+    where: { id: categoryId },
+  });
+
+  if (!category) {
+    throw new AppError(400, "Invalid Category: The specified category does not exist");
+  }
+
+  return await prisma.property.create({
+    data: {
+      ...propertyDetails,
+      landlordId,
+      categoryId,
+    },
+    include: {
+      category: true,
+    },
+  });
+};
+
+export const updateProperty = async (propertyId: string, landlordId: string, updateData: any) => {
+  const property = await prisma.property.findUnique({
+    where: { id: propertyId },
+  });
+
+  if (!property) {
+    throw new AppError(404, "Property not found");
+  }
+
+  if (property.landlordId !== landlordId) {
+    throw new AppError(403, "Forbidden: You do not own this property");
+  }
+
+  if (updateData.categoryId) {
+    const category = await prisma.category.findUnique({
+      where: { id: updateData.categoryId },
+    });
+    if (!category) {
+      throw new AppError(400, "Invalid Category: The specified category does not exist");
+    }
+  }
+
+  return await prisma.property.update({
+    where: { id: propertyId },
+    data: updateData,
+    include: {
+      category: true,
+    },
+  });
+};
+
+export const deleteProperty = async (propertyId: string, landlordId: string) => {
+  const property = await prisma.property.findUnique({
+    where: { id: propertyId },
+  });
+
+  if (!property) {
+    throw new AppError(404, "Property not found");
+  }
+
+  if (property.landlordId !== landlordId) {
+    throw new AppError(403, "Forbidden: You do not own this property");
+  }
+
+  const activeRequestsCount = await prisma.rentalRequest.count({
+    where: {
+      propertyId,
+      status: {
+        in: ["PENDING", "APPROVED", "ACTIVE"],
+      },
+    },
+  });
+
+  if (activeRequestsCount > 0) {
+    throw new AppError(
+      400,
+      "Cannot delete property: active, approved, or pending rental requests exist for this listing"
+    );
+  }
+
+  return await prisma.property.delete({
+    where: { id: propertyId },
+  });
+};
+
+export const getPropertiesByLandlord = async (
+  landlordId: string,
+  page: number,
+  limit: number
+) => {
+  const skip = (page - 1) * limit;
+
+  const [properties, total] = await prisma.$transaction([
+    prisma.property.findMany({
+      where: { landlordId },
+      include: {
+        category: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: limit,
+    }),
+    prisma.property.count({
+      where: { landlordId },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages,
+    },
+    properties,
+  };
+};
+
