@@ -68,8 +68,8 @@ export const createCheckoutSession = async (
       },
     ],
     mode: "payment",
-    success_url: "http://localhost:5000/api/payments/success",
-    cancel_url: "http://localhost:5000/api/payments/cancel",
+    success_url: `${config.app_base_url}/api/payments/success`,
+    cancel_url: `${config.app_base_url}/api/payments/cancel`,
     metadata: {
       rentalRequestId,
       tenantId,
