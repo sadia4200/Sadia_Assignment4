@@ -1,6 +1,8 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
+import apiRoutes from "./routes";
+import { errorHandler } from "./middlewares/errorHandler.middleware";
 
 const app: Application = express();
 
@@ -17,5 +19,11 @@ app.get("/api/health", (_req: Request, res: Response) => {
     message: "RentNest API is running",
   });
 });
+
+// --- API Routes ---
+app.use("/api", apiRoutes);
+
+// --- Global Error Handler ---
+app.use(errorHandler);
 
 export default app;
