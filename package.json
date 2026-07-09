@@ -1,7 +1,7 @@
 {
-  "name": "rentnest-api",
+  "name": "fixitnow-api",
   "version": "1.0.0",
-  "description": "RentNest — A rental property marketplace REST API",
+  "description": "FixItNow — A home services marketplace REST API",
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
