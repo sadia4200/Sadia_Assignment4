@@ -1,18 +1,21 @@
 model User {
-  id             String          @id @default(uuid())
-  email          String          @unique
-  password       String
-  name           String
-  phone          String?
-  role           Role
-  status         UserStatus      @default(ACTIVE)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id                String             @id @default(uuid())
+  email             String             @unique
+  password          String
+  name              String
+  phone             String?
+  role              Role
+  status            UserStatus         @default(ACTIVE)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   // Relations
-  properties     Property[]      @relation("LandlordProperties")
-  rentalRequests RentalRequest[] @relation("TenantRentalRequests")
-  reviews        Review[]        @relation("TenantReviews")
+  technicianProfile TechnicianProfile?
+  services          Service[]          @relation("TechnicianServices")
+  bookingsAsCustomer Booking[]         @relation("CustomerBookings")
+  bookingsAsTechnician Booking[]       @relation("TechnicianBookings")
+  reviewsWritten    Review[]           @relation("CustomerReviews")
+  reviewsReceived   Review[]           @relation("TechnicianReviews")
 
   @@index([email])
 }
