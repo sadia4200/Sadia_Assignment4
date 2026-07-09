@@ -5,7 +5,7 @@ const startServer = async (): Promise<void> => {
   try {
     app.listen(config.port, () => {
       console.log(
-        `🚀 RentNest API server is running on http://localhost:${config.port}`
+        `🚀 FixItNow API server is running on http://localhost:${config.port}`
       );
       console.log(`📋 Health check: http://localhost:${config.port}/api/health`);
     });
