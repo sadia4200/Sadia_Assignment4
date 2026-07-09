@@ -1,23 +1,21 @@
 import { Router } from "express";
 import { authRoutes } from "../modules/auth/auth.routes";
 import { categoriesRoutes } from "../modules/categories/categories.routes";
-import { propertiesRoutes } from "../modules/properties/properties.routes";
-import { landlordPropertiesRoutes, landlordRequestsRoutes } from "../modules/properties/landlordProperties.routes";
-import { rentalsRoutes } from "../modules/rentals/rentals.routes";
+import { servicesRoutes } from "../modules/services/services.routes";
+import { bookingsRoutes } from "../modules/bookings/bookings.routes";
 import { reviewsRoutes } from "../modules/reviews/reviews.routes";
 import { adminRoutes } from "../modules/admin/admin.routes";
-import { auth } from "../middlewares/auth.middleware";
-import { authorizeRoles } from "../middlewares/role.middleware";
+import { techniciansPublicRoutes, technicianPrivateRoutes } from "../modules/technicians/technicians.routes";
 
 const router = Router();
 
 router.use("/auth", authRoutes);
 router.use("/categories", categoriesRoutes);
-router.use("/properties", propertiesRoutes);
-router.use("/rentals", rentalsRoutes);
+router.use("/services", servicesRoutes);
+router.use("/bookings", bookingsRoutes);
 router.use("/reviews", reviewsRoutes);
 router.use("/admin", adminRoutes);
-router.use("/landlord/properties", auth, authorizeRoles("LANDLORD"), landlordPropertiesRoutes);
-router.use("/landlord/requests", auth, authorizeRoles("LANDLORD"), landlordRequestsRoutes);
+router.use("/technicians", techniciansPublicRoutes);
+router.use("/technician", technicianPrivateRoutes);
 
 export default router;
