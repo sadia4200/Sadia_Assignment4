@@ -135,6 +135,20 @@ export const confirmPayment = async (signature: string, rawBody: Buffer): Promis
         }),
       ]);
     }
+  } else if (event.type === "checkout.session.expired") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const payment = await prisma.payment.findUnique({
+      where: { transactionId: session.id },
+    });
+
+    if (payment && payment.status === "PENDING") {
+      await prisma.payment.update({
+        where: { transactionId: session.id },
+        data: {
+          status: "FAILED",
+        },
+      });
+    }
   }
 };
 
