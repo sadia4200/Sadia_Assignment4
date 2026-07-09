@@ -11,7 +11,7 @@ router.use(auth);
 
 router.post(
   "/",
-  authorizeRoles("TENANT"),
+  authorizeRoles("CUSTOMER"),
   validate(createReviewSchema),
   reviewsController.createReview
 );
