@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const createPaymentSchema = z.object({
   body: z.object({
-    rentalRequestId: z.string().uuid("Invalid rental request ID format"),
+    bookingId: z.string().uuid("Invalid booking ID format"),
   }),
 });
 
@@ -17,5 +17,11 @@ export const getPaymentsSchema = z.object({
       (val) => (val ? parseInt(val as string, 10) : undefined),
       z.number().int().positive("limit must be a positive integer").default(10)
     ),
+  }),
+});
+
+export const getPaymentByIdSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("Invalid payment ID format"),
   }),
 });

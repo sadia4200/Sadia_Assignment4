@@ -13,44 +13,45 @@ export interface PaymentsQueryFilters {
 }
 
 export const createCheckoutSession = async (
-  tenantId: string,
-  rentalRequestId: string
+  customerId: string,
+  bookingId: string
 ): Promise<{ sessionId: string; url: string | null }> => {
-  const rentalRequest = await prisma.rentalRequest.findUnique({
-    where: { id: rentalRequestId },
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
     include: {
-      property: true,
+      service: true,
     },
   });
 
-  if (!rentalRequest) {
-    throw new AppError(404, "Rental request not found");
+  if (!booking) {
+    throw new AppError(404, "Booking not found");
   }
 
-  if (rentalRequest.tenantId !== tenantId) {
+  if (booking.customerId !== customerId) {
     throw new AppError(403, "Forbidden: Access denied");
   }
 
   const existingCompletedPayment = await prisma.payment.findFirst({
     where: {
-      rentalRequestId,
+      bookingId,
       status: "COMPLETED",
     },
   });
 
-  if (existingCompletedPayment || rentalRequest.status === "ACTIVE" || rentalRequest.status === "COMPLETED") {
-    throw new AppError(409, "Payment has already been completed for this rental request");
+  const nonPayableStatuses = ["PAID", "IN_PROGRESS", "COMPLETED", "CANCELLED", "DECLINED"];
+  if (existingCompletedPayment || nonPayableStatuses.includes(booking.status)) {
+    throw new AppError(409, "Payment has already been completed or booking is inactive");
   }
 
-  if (rentalRequest.status !== "APPROVED") {
+  if (booking.status !== "ACCEPTED") {
     throw new AppError(
       400,
-      `Payment can only be made for approved rental requests. Current request status is ${rentalRequest.status}.`
+      `Payment can only be made for accepted bookings. Current booking status is ${booking.status}.`
     );
   }
 
-  const property = rentalRequest.property;
-  const amountInCents = Math.round(property.price * 100);
+  const service = booking.service;
+  const amountInCents = Math.round(service.price * 100);
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
@@ -59,8 +60,8 @@ export const createCheckoutSession = async (
         price_data: {
           currency: "usd",
           product_data: {
-            name: `Rental Payment: ${property.title}`,
-            description: `Rental booking for property located in ${property.location}`,
+            name: `Service Payment: ${service.title}`,
+            description: `Home service booking located in ${service.location}`,
           },
           unit_amount: amountInCents,
         },
@@ -71,17 +72,17 @@ export const createCheckoutSession = async (
     success_url: `${config.app_base_url}/api/payments/success`,
     cancel_url: `${config.app_base_url}/api/payments/cancel`,
     metadata: {
-      rentalRequestId,
-      tenantId,
+      bookingId,
+      customerId,
     },
   });
 
-  // Check if a pending payment with this session/transaction already exists or create new
+  // Create pending payment record
   await prisma.payment.create({
     data: {
-      rentalRequestId,
+      bookingId,
       transactionId: session.id,
-      amount: property.price,
+      amount: service.price,
       method: "CARD",
       provider: "STRIPE",
       status: "PENDING",
@@ -106,10 +107,10 @@ export const confirmPayment = async (signature: string, rawBody: Buffer): Promis
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    const rentalRequestId = session.metadata?.rentalRequestId;
+    const bookingId = session.metadata?.bookingId;
 
-    if (!rentalRequestId) {
-      console.warn("Stripe webhook session completed without rentalRequestId in metadata.");
+    if (!bookingId) {
+      console.warn("Stripe webhook session completed without bookingId in metadata.");
       return;
     }
 
@@ -126,10 +127,10 @@ export const confirmPayment = async (signature: string, rawBody: Buffer): Promis
             paidAt: new Date(),
           },
         }),
-        prisma.rentalRequest.update({
-          where: { id: rentalRequestId },
+        prisma.booking.update({
+          where: { id: bookingId },
           data: {
-            status: "ACTIVE",
+            status: "PAID",
           },
         }),
       ]);
@@ -137,13 +138,13 @@ export const confirmPayment = async (signature: string, rawBody: Buffer): Promis
   }
 };
 
-export const getTenantPayments = async (tenantId: string, filters: PaymentsQueryFilters) => {
+export const getCustomerPayments = async (customerId: string, filters: PaymentsQueryFilters) => {
   const { status, page, limit } = filters;
   const skip = (page - 1) * limit;
 
   const whereClause: any = {
-    rentalRequest: {
-      tenantId,
+    booking: {
+      customerId,
     },
   };
   if (status) {
@@ -154,9 +155,9 @@ export const getTenantPayments = async (tenantId: string, filters: PaymentsQuery
     prisma.payment.findMany({
       where: whereClause,
       include: {
-        rentalRequest: {
+        booking: {
           include: {
-            property: true,
+            service: true,
           },
         },
       },
@@ -184,15 +185,13 @@ export const getTenantPayments = async (tenantId: string, filters: PaymentsQuery
   };
 };
 
-export const getLandlordPayments = async (landlordId: string, filters: PaymentsQueryFilters) => {
+export const getTechnicianPayments = async (technicianId: string, filters: PaymentsQueryFilters) => {
   const { status, page, limit } = filters;
   const skip = (page - 1) * limit;
 
   const whereClause: any = {
-    rentalRequest: {
-      property: {
-        landlordId,
-      },
+    booking: {
+      technicianId,
     },
   };
   if (status) {
@@ -203,10 +202,10 @@ export const getLandlordPayments = async (landlordId: string, filters: PaymentsQ
     prisma.payment.findMany({
       where: whereClause,
       include: {
-        rentalRequest: {
+        booking: {
           include: {
-            property: true,
-            tenant: {
+            service: true,
+            customer: {
               select: {
                 id: true,
                 name: true,
@@ -244,9 +243,9 @@ export const getPaymentById = async (paymentId: string, userId: string): Promise
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
     include: {
-      rentalRequest: {
+      booking: {
         include: {
-          property: true,
+          service: true,
         },
       },
     },
@@ -256,10 +255,10 @@ export const getPaymentById = async (paymentId: string, userId: string): Promise
     throw new AppError(404, "Payment not found");
   }
 
-  const rental = payment.rentalRequest;
+  const booking = payment.booking;
 
-  // Access check: only tenant who paid or property landlord
-  if (rental.tenantId !== userId && rental.property.landlordId !== userId) {
+  // Access check
+  if (booking.customerId !== userId && booking.technicianId !== userId) {
     throw new AppError(403, "Forbidden: Access denied");
   }
 

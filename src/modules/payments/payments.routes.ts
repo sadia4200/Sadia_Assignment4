@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import * as paymentsController from "./payments.controller";
-import { createPaymentSchema, getPaymentsSchema } from "./payments.validation";
+import { createPaymentSchema, getPaymentsSchema, getPaymentByIdSchema } from "./payments.validation";
 import { validate } from "../../middlewares/validate.middleware";
 import { auth } from "../../middlewares/auth.middleware";
 import { authorizeRoles } from "../../middlewares/role.middleware";
@@ -22,12 +22,12 @@ router.use(auth);
 
 router.post(
   "/create",
-  authorizeRoles("TENANT"),
+  authorizeRoles("CUSTOMER"),
   validate(createPaymentSchema),
   paymentsController.createSession
 );
 
 router.get("/", validate(getPaymentsSchema), paymentsController.getHistory);
-router.get("/:id", paymentsController.getDetails);
+router.get("/:id", validate(getPaymentByIdSchema), paymentsController.getDetails);
 
 export const paymentsRoutes = router;

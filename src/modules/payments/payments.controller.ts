@@ -9,9 +9,12 @@ export const createSession = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const tenantId = req.user!.id;
-    const { rentalRequestId } = req.body;
-    const result = await paymentsService.createCheckoutSession(tenantId, rentalRequestId);
+    if (!req.user) {
+      throw new AppError(401, "Unauthorized");
+    }
+    const customerId = req.user.id;
+    const { bookingId } = req.body;
+    const result = await paymentsService.createCheckoutSession(customerId, bookingId);
     sendSuccess(res, 201, "Stripe checkout session created successfully", result);
   } catch (error) {
     next(error);
@@ -44,18 +47,21 @@ export const getHistory = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.user!.id;
-    const role = req.user!.role;
+    if (!req.user) {
+      throw new AppError(401, "Unauthorized");
+    }
+    const userId = req.user.id;
+    const role = req.user.role;
     const filters = req.query as any;
 
-    if (role === "TENANT") {
-      const result = await paymentsService.getTenantPayments(userId, filters);
-      return sendSuccess(res, 200, "Tenant payment history retrieved successfully", result);
+    if (role === "CUSTOMER") {
+      const result = await paymentsService.getCustomerPayments(userId, filters);
+      return sendSuccess(res, 200, "Customer payment history retrieved successfully", result);
     }
 
-    if (role === "LANDLORD") {
-      const result = await paymentsService.getLandlordPayments(userId, filters);
-      return sendSuccess(res, 200, "Landlord property payment history retrieved successfully", result);
+    if (role === "TECHNICIAN") {
+      const result = await paymentsService.getTechnicianPayments(userId, filters);
+      return sendSuccess(res, 200, "Technician payment history retrieved successfully", result);
     }
 
     if (role === "ADMIN") {
@@ -77,7 +83,10 @@ export const getDetails = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    if (!req.user) {
+      throw new AppError(401, "Unauthorized");
+    }
+    const userId = req.user.id;
     const { id } = req.params;
     const result = await paymentsService.getPaymentById(id as string, userId);
     sendSuccess(res, 200, "Payment details retrieved successfully", result);
