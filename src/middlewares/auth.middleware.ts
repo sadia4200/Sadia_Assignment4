@@ -5,7 +5,7 @@ import { AppError } from "../utils/errors";
 
 export interface DecodedUser {
   id: string;
-  role: "TENANT" | "LANDLORD" | "ADMIN";
+  role: "CUSTOMER" | "TECHNICIAN" | "ADMIN";
 }
 
 // Extend Express Request globally in this compilation scope
