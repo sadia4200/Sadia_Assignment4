@@ -1,6 +1,6 @@
-# RentNest API — Rental Property Marketplace
+# FixItNow API — Home Services Marketplace
 
-RentNest is a comprehensive backend REST API built for a rental property marketplace platform. It supports three distinct user roles (Tenants, Landlords, and Admins) to manage property listings, rental requests, Stripe card payments, tenant reviews, and administrative platform oversight.
+FixItNow is a comprehensive backend REST API built for a home services marketplace platform. It supports three distinct user roles (Customers, Technicians, and Admins) to manage category listings, home services, bookings, technician profiles, Stripe card payments, customer reviews, and administrative platform oversight.
 
 ---
 
@@ -44,7 +44,7 @@ npx prisma db push
 ```
 
 ### 4. Seed Sample Demo Data
-Populate the database with default accounts, categories, listings, completed rental flows, and mock payments:
+Populate the database with the default admin account and service categories:
 ```bash
 npx prisma db seed
 ```
@@ -57,97 +57,85 @@ npx prisma db seed
 * **Production Build & Start:**
   ```bash
   npm run build
+  ```
+  ```bash
   npm run start
   ```
 
 ---
 
-## 🔑 Default Admin & Test Credentials
+## 🔑 Default Admin Credentials
 
-The database seed script populates the following accounts automatically:
+The database seed script populates the following admin account automatically:
 
 | Role | Email | Password | Details / Usage |
 | :--- | :--- | :--- | :--- |
-| **ADMIN** | `admin@rentnest.com` | `Admin@123` | Can ban/unban users, manage categories, oversee all platform data logs. |
-| **LANDLORD** | `landlord1@rentnest.com` | `Password123` | Owns Gulshan Penthouse & Banani Studio. |
-| **LANDLORD** | `landlord2@rentnest.com` | `Password123` | Owns Dhanmondi Lakefront House & Uttara Condo. |
-| **TENANT** | `tenant1@rentnest.com` | `Password123` | Has one pending request and one approved request. |
-| **TENANT** | `tenant2@rentnest.com` | `Password123` | Has a completed rental request, completed Stripe payment, and review. |
+| **ADMIN** | `admin@fixitnow.com` | `admin123` | Can ban/unban users, oversee all platform bookings, and manage service categories. |
+
+*Note: You can register Customers and Technicians using the public `/api/auth/register` endpoint.*
 
 ---
 
 ## 💳 Testing Stripe Checkout & Webhooks
 
-RentNest supports fully-integrated Stripe card checkouts:
-1. **Initiate Payment:** As a Tenant with an `APPROVED` booking, hit `POST /api/payments/create`. Copy the returned Stripe `url`.
-2. **Start Webhook listener:** In another terminal, run Stripe CLI forwarder to capture the raw confirmation webhook event:
+FixItNow supports integrated Stripe card checkouts:
+1. **Submit Booking:** As a registered Customer, submit a booking request for a service via `POST /api/bookings`.
+2. **Accept Booking:** As the assigned Technician (or an Admin), accept the booking via `PATCH /api/technician/bookings/:id` (set status to `ACCEPTED`).
+3. **Initiate Payment:** As the Customer, generate a Stripe checkout session via `POST /api/payments/create`. Copy the returned Stripe checkout `url`.
+4. **Start Webhook listener:** In another terminal, run the Stripe CLI forwarder to capture checkout confirmation webhooks:
    ```bash
    stripe listen --forward-to localhost:5000/api/payments/confirm
    ```
-3. **Submit Payment:** Open the copied URL in a browser and submit using the standard Stripe test card:
+5. **Submit Payment:** Open the checkout URL in a browser and submit using the standard Stripe test card:
    - **Card Number:** `4242 4242 4242 4242`
-   - **Expiry / CVC / Name:** Any future date, arbitrary 3-digit CVC, and name.
-4. **Lifecycle Shift:** The webhook signature will verify, marking the Payment record as `COMPLETED` and the RentalRequest status as `ACTIVE` automatically.
+   - **Expiry / CVC / Name:** Any future date, any 3-digit CVC, and name.
+6. **Lifecycle Shift:** The webhook signature will verify, marking the Payment record as `COMPLETED` and the Booking status as `PAID` automatically.
 
 ---
 
 ## 📋 API Endpoints Reference
 
 ### 🔐 Authentication Module (`/api/auth`)
-* `POST /register` — Register a new account (`TENANT` or `LANDLORD` only).
+* `POST /register` — Register a new account (`CUSTOMER` or `TECHNICIAN`).
 * `POST /login` — Login and receive a JWT. Banned users are blocked.
 * `GET /me` — Retrieve the currently authenticated user's profile.
 
-### 📁 Categories Module (`/api/categories`)
-* `GET /` — Public list of all property categories.
+### 📂 Public Modules (`/api/categories`, `/api/services`, `/api/technicians`)
+* `GET /categories` — Public list of all service categories.
+* `GET /services` — Public filtered list of services (filter by type, location, rating, price).
+* `GET /technicians` — Public list of technicians (search and filter by location, skills, rating).
+* `GET /technicians/:id` — View specific technician profile.
 
-### 🏠 Properties Module (`/api/properties` & `/api/landlord/properties`)
-* `GET /properties` — Public paginated & filtered list of `AVAILABLE` properties (location, price, type, amenities, category).
-* `GET /properties/:id` — Public property details.
-* `GET /properties/:id/reviews` — Public paginated reviews of a property.
-* `GET /landlord/properties` — Landlord's list of their own property listings.
-* `POST /landlord/properties` — Create a new property listing (Landlord only).
-* `PUT /landlord/properties/:id` — Update own property details (Landlord only).
-* `DELETE /landlord/properties/:id` — Delete own listing (Landlord only, blocked if active/approved booking requests exist).
-
-### 📅 Rental Requests Module (`/api/rentals` & `/api/landlord/requests`)
-* `POST /rentals` — Submit rental request (Tenant only, checks availability & duplicate pending requests).
-* `GET /rentals` — List own rental requests (Tenants see theirs, Landlords see requests for their properties).
-* `GET /rentals/:id` — Retrieve booking request details (access restricted to requester tenant and property landlord).
-* `GET /landlord/requests` — Landlord's view of requests submitted for their properties.
-* `PATCH /landlord/requests/:id` — Process rental request (Landlord only, actions: `APPROVE` or `REJECT`).
+### 📅 Bookings Module (`/api/bookings`)
+* `POST /bookings` — Submit a booking request (Customer only).
+* `GET /bookings` — List bookings for the authenticated customer.
+* `GET /bookings/:id` — Retrieve booking details (Restricted to Customer, Technician, and Admin).
 
 ### 💳 Payments Module (`/api/payments`)
-* `POST /payments/create` — Create a Stripe Checkout session (Tenant only, request status must be `APPROVED`).
-* `POST /payments/confirm` — Stripe Webhook receiver (Public raw endpoint, validates signature, completes payment, activates booking).
-* `GET /payments` — Paginated list of payments history.
-* `GET /payments/:id` — Retrieve payment details (restricted to payer tenant and property landlord).
+* `POST /payments/create` — Create a Stripe Checkout session (Customer only, status must be `ACCEPTED`).
+* `POST /payments/confirm` — Stripe Webhook receiver (Public raw endpoint, validates signature).
+* `GET /payments` — Paginated list of payments (Customer or Technician).
+* `GET /payments/:id` — Retrieve payment details.
+
+### 🔧 Technician Module (`/api/technician`)
+* `PUT /technician/profile` — Update private profile details (Technician only).
+* `PUT /technician/availability` — Toggle availability status (Technician only).
+* `GET /technician/bookings` — List assigned bookings (Technician only).
+* `PATCH /technician/bookings/:id` — Update booking status (Technician or Customer).
 
 ### ✍️ Reviews Module (`/api/reviews`)
-* `POST /reviews` — Submit property review (Tenant only, request status must be `COMPLETED`, only one review per request).
+* `POST /reviews` — Submit a booking review (Customer only, status must be `COMPLETED`).
 
 ### 👑 Admin Module (`/api/admin`)
-* `GET /admin/users` — List all users (filter by role/status).
-* `PATCH /admin/users/:id` — Ban/unban users (prevent self-ban).
-* `GET /admin/properties` — List all platform properties.
-* `GET /admin/rentals` — List all platform rental requests.
-* `GET /admin/payments` — List all platform payments.
-* `POST /admin/categories` — Create category (enforces name uniqueness).
-* `PUT /admin/categories/:id` — Update category details.
-* `DELETE /admin/categories/:id` — Delete category (blocked if properties reference it).
-
-## 📖 API Documentation
-
-RentNest uses Swagger / OpenAPI to compile interactive API documentation. You can access the UI endpoint locally at:
-* **Local API Docs URL:** [http://localhost:5000/api/docs](http://localhost:5000/api/docs)
-
-Once deployed, the live document interface will be available at:
-* **Postman/Swagger Docs URL:** [LIVE_API_URL]/api/docs
+* `GET /admin/users` — List and filter platform users.
+* `PATCH /admin/users/:id` — Ban or unban users (prevents self-ban).
+* `GET /admin/bookings` — Oversee all bookings across the platform.
+* `GET /admin/categories` — List all categories.
+* `POST /admin/categories` — Create a new service category.
 
 ---
 
-## 🔗 Deployment & Demo Links
+## 📖 API Documentation
 
-* **Live API Production URL:** [LIVE_API_URL]
-* **Postman/Swagger Docs URL:** [LIVE_API_URL]/api/docs
-* **E2E Demo Walkthrough Video:** *[To be filled in after recording]*
+FixItNow uses Swagger / OpenAPI to compile interactive API documentation. You can access the UI endpoint locally at:
+* **Local API Docs URL:** [http://localhost:5000/api/docs](http://localhost:5000/api/docs)
