@@ -3,11 +3,8 @@ import * as adminController from "./admin.controller";
 import {
   getUsersSchema,
   updateUserStatusSchema,
-  getPropertiesSchema,
-  getRentalsSchema,
-  getPaymentsSchema,
+  getBookingsSchema,
   createCategorySchema,
-  updateCategorySchema,
 } from "./admin.validation";
 import { validate } from "../../middlewares/validate.middleware";
 import { auth } from "../../middlewares/auth.middleware";
@@ -23,14 +20,11 @@ router.use(authorizeRoles("ADMIN"));
 router.get("/users", validate(getUsersSchema), adminController.getUsers);
 router.patch("/users/:id", validate(updateUserStatusSchema), adminController.updateUserStatus);
 
-// Oversight logs
-router.get("/properties", validate(getPropertiesSchema), adminController.getProperties);
-router.get("/rentals", validate(getRentalsSchema), adminController.getRentals);
-router.get("/payments", validate(getPaymentsSchema), adminController.getPayments);
+// Bookings oversight
+router.get("/bookings", validate(getBookingsSchema), adminController.getBookings);
 
-// Category CRUD
+// Categories CRUD oversight
+router.get("/categories", adminController.getCategories);
 router.post("/categories", validate(createCategorySchema), adminController.createCategory);
-router.put("/categories/:id", validate(updateCategorySchema), adminController.updateCategory);
-router.delete("/categories/:id", adminController.deleteCategory);
 
 export const adminRoutes = router;

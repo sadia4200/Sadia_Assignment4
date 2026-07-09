@@ -1,9 +1,10 @@
 import prisma from "../../config/prisma";
 import { AppError } from "../../utils/errors";
-import { User, Property, RentalRequest, Payment, Category, UserStatus, PropertyAvailability, RentalStatus, PaymentStatus } from "@prisma/client";
+import { User, Category, UserStatus, BookingStatus } from "@prisma/client";
 
+// Get all users
 export const getUsers = async (filters: {
-  role?: "TENANT" | "LANDLORD" | "ADMIN";
+  role?: "CUSTOMER" | "TECHNICIAN" | "ADMIN";
   status?: UserStatus;
   page: number;
   limit: number;
@@ -48,6 +49,7 @@ export const getUsers = async (filters: {
   };
 };
 
+// Update user status (ban/unban)
 export const updateUserStatus = async (
   adminId: string,
   targetUserId: string,
@@ -71,54 +73,9 @@ export const updateUserStatus = async (
   });
 };
 
-export const getProperties = async (filters: {
-  availability?: PropertyAvailability;
-  landlordId?: string;
-  page: number;
-  limit: number;
-}) => {
-  const { availability, landlordId, page, limit } = filters;
-  const skip = (page - 1) * limit;
-
-  const whereClause: any = {};
-  if (availability) whereClause.availability = availability;
-  if (landlordId) whereClause.landlordId = landlordId;
-
-  const [properties, total] = await prisma.$transaction([
-    prisma.property.findMany({
-      where: whereClause,
-      include: {
-        category: true,
-        landlord: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-    }),
-    prisma.property.count({ where: whereClause }),
-  ]);
-
-  const totalPages = Math.ceil(total / limit);
-
-  return {
-    meta: {
-      total,
-      page,
-      limit,
-      totalPages,
-    },
-    properties,
-  };
-};
-
-export const getRentals = async (filters: {
-  status?: RentalStatus;
+// Get all bookings
+export const getBookings = async (filters: {
+  status?: BookingStatus;
   page: number;
   limit: number;
 }) => {
@@ -128,28 +85,38 @@ export const getRentals = async (filters: {
   const whereClause: any = {};
   if (status) whereClause.status = status;
 
-  const [rentals, total] = await prisma.$transaction([
-    prisma.rentalRequest.findMany({
+  const [bookings, total] = await prisma.$transaction([
+    prisma.booking.findMany({
       where: whereClause,
       include: {
-        property: {
+        service: {
           include: {
             category: true,
           },
         },
-        tenant: {
+        customer: {
           select: {
             id: true,
             name: true,
             email: true,
+            phone: true,
           },
         },
+        technician: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        payments: true,
       },
       orderBy: { createdAt: "desc" },
       skip,
       take: limit,
     }),
-    prisma.rentalRequest.count({ where: whereClause }),
+    prisma.booking.count({ where: whereClause }),
   ]);
 
   const totalPages = Math.ceil(total / limit);
@@ -161,125 +128,44 @@ export const getRentals = async (filters: {
       limit,
       totalPages,
     },
-    rentals,
+    bookings,
   };
 };
 
-export const getPayments = async (filters: {
-  status?: PaymentStatus;
-  page: number;
-  limit: number;
-}) => {
-  const { status, page, limit } = filters;
-  const skip = (page - 1) * limit;
+// Get all categories
+export const getCategories = async (): Promise<Category[]> => {
+  return await prisma.category.findMany({
+    orderBy: { name: "asc" },
+  });
+};
 
-  const whereClause: any = {};
-  if (status) whereClause.status = status;
+// Create a category with auto slug
+export const createCategory = async (data: { name: string }): Promise<Category> => {
+  const { name } = data;
 
-  const [payments, total] = await prisma.$transaction([
-    prisma.payment.findMany({
-      where: whereClause,
-      include: {
-        rentalRequest: {
-          include: {
-            property: true,
-            tenant: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-    }),
-    prisma.payment.count({ where: whereClause }),
-  ]);
+  const slug = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 
-  const totalPages = Math.ceil(total / limit);
-
-  return {
-    meta: {
-      total,
-      page,
-      limit,
-      totalPages,
+  const existingCategory = await prisma.category.findFirst({
+    where: {
+      OR: [
+        { name },
+        { slug },
+      ],
     },
-    payments,
-  };
-};
-
-export const createCategory = async (data: { name: string; description?: string }): Promise<Category> => {
-  const { name, description } = data;
-
-  const existingCategory = await prisma.category.findUnique({
-    where: { name },
   });
 
   if (existingCategory) {
-    throw new AppError(409, "Category with this name already exists");
+    throw new AppError(409, "Category with this name or slug already exists");
   }
 
   return await prisma.category.create({
-    data: { name, description },
-  });
-};
-
-export const updateCategory = async (
-  id: string,
-  data: { name?: string; description?: string }
-): Promise<Category> => {
-  const { name, description } = data;
-
-  const category = await prisma.category.findUnique({
-    where: { id },
-  });
-
-  if (!category) {
-    throw new AppError(404, "Category not found");
-  }
-
-  if (name && name !== category.name) {
-    const existingCategory = await prisma.category.findUnique({
-      where: { name },
-    });
-
-    if (existingCategory) {
-      throw new AppError(409, "Category with this name already exists");
-    }
-  }
-
-  return await prisma.category.update({
-    where: { id },
-    data: { name, description },
-  });
-};
-
-export const deleteCategory = async (id: string): Promise<Category> => {
-  const category = await prisma.category.findUnique({
-    where: { id },
-  });
-
-  if (!category) {
-    throw new AppError(404, "Category not found");
-  }
-
-  const propertyCount = await prisma.property.count({
-    where: { categoryId: id },
-  });
-
-  if (propertyCount > 0) {
-    throw new AppError(
-      400,
-      "Cannot delete category because it is referenced by existing properties"
-    );
-  }
-
-  return await prisma.category.delete({
-    where: { id },
+    data: {
+      name,
+      slug,
+    },
   });
 };
