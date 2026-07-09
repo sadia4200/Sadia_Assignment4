@@ -1,6 +1,6 @@
 enum Role {
-  TENANT
-  LANDLORD
+  CUSTOMER
+  TECHNICIAN
   ADMIN
 }
 
@@ -9,18 +9,14 @@ enum UserStatus {
   BANNED
 }
 
-enum PropertyAvailability {
-  AVAILABLE
-  RENTED
-  MAINTENANCE
-}
-
-enum RentalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  ACTIVE
+enum BookingStatus {
+  REQUESTED
+  ACCEPTED
+  DECLINED
+  PAID
+  IN_PROGRESS
   COMPLETED
+  CANCELLED
 }
 
 enum PaymentStatus {
